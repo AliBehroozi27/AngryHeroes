@@ -8,10 +8,17 @@ public class Hero : MonoBehaviour
     public const float LUANCH_FORCE = 400;
     public const float TRAJECTORY_LUANCH_FORCE = 4;
     const float MAX_DRAG_DISTANCE = 2;
+    Vector2 FLASH_VEL = new Vector2(20, 0);
     Vector2 startPosition;
     new Rigidbody2D rigidbody;
 
+    public bool isReadyToLaunch;
+
+    [SerializeField] public float point;
     [SerializeField] Trajectory trajectory;
+    [SerializeField] AudioSource auidoDeath;
+
+    public Action onLuanchAction;
 
     void Awake()
     {
@@ -20,30 +27,52 @@ public class Hero : MonoBehaviour
 
     void Start()
     {
-        startPosition = rigidbody.position;
         rigidbody.isKinematic = true;
     }
 
     void OnMouseUp()
     {
+        if (!isReadyToLaunch)
+        {
+            return;
+        }
+
         Vector2 currentPosition = rigidbody.position;
         Vector2 direction = startPosition - currentPosition;
         float distance = Vector2.Distance(startPosition, currentPosition);
         direction.Normalize();
 
         rigidbody.isKinematic = false;
-        rigidbody.AddForce(direction * distance * LUANCH_FORCE);
+
+        if (GetComponent<Flash>() != null)
+        {
+            rigidbody.velocity = FLASH_VEL * new Vector2(1,0);
+        }
+
+        rigidbody.AddForce(direction * distance * LUANCH_FORCE * rigidbody.mass);
         rigidbody.angularVelocity = -20;
         trajectory.Hide();
+        onLuanchAction?.Invoke();
     }
 
     void OnMouseDown()
     {
+        if (!isReadyToLaunch)
+        {
+            return;
+        }
+
         trajectory.Show();
     }
 
     void OnMouseDrag()
     {
+        if (!isReadyToLaunch)
+        {
+            return;
+        }
+
+        startPosition = LevelManager.luanchPosition;
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         Vector2 targetPosition = mousePosition;
         Vector2 direction = targetPosition - startPosition;
@@ -73,18 +102,23 @@ public class Hero : MonoBehaviour
         StartCoroutine(OnHeroHit(collision));
     }
 
-    private IEnumerator OnHeroHit(Collision2D collision)
+    private void OnTriggerEnter2D(Collider2D collision)
     {
-        yield return new WaitForSeconds(3);
-        rigidbody.isKinematic = true;
-        transform.position = startPosition;
-        rigidbody.velocity = new Vector2(0, 0);
-        rigidbody.rotation = 0;
-        rigidbody.angularVelocity = 0;
+        if (collision.gameObject.CompareTag(Tags.BULLET))
+        {
+            destroy();
+        }
     }
 
-    void Update()
+    private IEnumerator OnHeroHit(Collision2D collision)
     {
-       
+        yield return new WaitForSeconds(2);
+        destroy();
+    }
+
+    void destroy()
+    {
+        auidoDeath.Play();
+        gameObject.SetActive(false);
     }
 }

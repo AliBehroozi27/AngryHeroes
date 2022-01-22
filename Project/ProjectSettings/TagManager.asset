@@ -8,6 +8,9 @@ TagManager:
   - Hero
   - Box
   - Platform
+  - Bullet
+  - Bat
+  - Laser
   layers:
   - Default
   - TransparentFX
